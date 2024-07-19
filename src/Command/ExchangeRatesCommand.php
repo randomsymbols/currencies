@@ -2,7 +2,6 @@
 
 namespace App\Command;
 
-use App\Entity\Rate;
 use App\Service\Rates;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -11,8 +10,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
-#[AsCommand(name: 'app:rates-get')]
-class GetRatesCommand extends Command
+#[AsCommand(name: 'app:rates-exchange')]
+class ExchangeRatesCommand extends Command
 {
     public function __construct(
         private readonly Rates $rates,
@@ -23,25 +22,14 @@ class GetRatesCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
-            $baseCurrency = $input->getArgument('baseCurrency');
+            $amount = $input->getArgument('amount');
+            $fromCurrency = $input->getArgument('fromCurrency');
+            $toCurrency = $input->getArgument('toCurrency');
 
-            if (!$baseCurrency) {
-                $baseCurrency = Rates::DEFAULT_BASE_CURRENCY;
-            }
+            $result = $this->rates->exchange($amount, $fromCurrency, $toCurrency);
+            $resultJson = json_encode($result, JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR);
 
-            $rates = $this->rates->getRates($baseCurrency);
-            $rates = array_values($rates);
-            $rates = array_map(
-                fn (Rate $rate) => [
-                    'code' => $rate->getCode(),
-                    'rate' => $rate->getInverseRate(),
-                ],
-                $rates,
-            );
-
-            $ratesJson = json_encode($rates, JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR);
-
-            $output->writeln($ratesJson);
+            $output->writeln($resultJson);
 
             return Command::SUCCESS;
         } catch (Throwable $e) {
@@ -55,8 +43,16 @@ class GetRatesCommand extends Command
     {
         $this
             ->addArgument(
-                'baseCurrency',
-                InputArgument::OPTIONAL,
+                'amount',
+                InputArgument::REQUIRED,
+            )
+            ->addArgument(
+                'fromCurrency',
+                InputArgument::REQUIRED,
+            )
+            ->addArgument(
+                'toCurrency',
+                InputArgument::REQUIRED,
             )
         ;
     }

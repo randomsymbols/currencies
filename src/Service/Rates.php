@@ -2,7 +2,9 @@
 
 namespace App\Service;
 
+use App\Entity\Rate;
 use App\Exceptions\FileNotFoundException;
+use App\Exceptions\RateNotFoundException;
 use Brick\Math\BigDecimal;
 use Brick\Math\Exception\DivisionByZeroException;
 use Brick\Math\Exception\MathException;
@@ -71,9 +73,46 @@ class Rates
         $fiatRatesArray = $this->buildFiatRatesArray($baseCurrency, $fiatRates);
 
         $ratesArray = array_merge($cryptoRatesArray, $fiatRatesArray);
-        usort($ratesArray, fn ($a, $b) => $a['code'] <=> $b['code']);
+        ksort($ratesArray);
 
         return $ratesArray;
+    }
+
+    /**
+     * @throws DivisionByZeroException
+     * @throws FileNotFoundException
+     * @throws MathException
+     * @throws NumberFormatException
+     * @throws RateNotFoundException
+     */
+    public function exchange(string $amount, string $fromCurrency, string $toCurrency): array
+    {
+        $rates = $this->getRates($toCurrency);
+
+        if (!array_key_exists($fromCurrency, $rates)) {
+            throw new RateNotFoundException("Rate for currency $fromCurrency not found!");
+        }
+
+        /**
+         * @var Rate $rate
+         */
+        $rate = $rates[$fromCurrency];
+
+        $resultAmount =BigDecimal::of($amount)
+            ->multipliedBy($rate->getRate())
+        ;
+
+        return [
+            'amount' => $resultAmount,
+            'currency_from' => [
+                'rate' => $rate->getInverseRate(),
+                'code' => $fromCurrency,
+            ],
+            'currency_to' => [
+                'rate' => 1,
+                'code' => $toCurrency,
+            ],
+        ];
     }
 
     /**
@@ -95,26 +134,23 @@ class Rates
                 continue;
             }
 
-            $price = $rate['quotes'][$baseCurrency]['price'];
+            $rate = $rate['quotes'][$baseCurrency]['price'];
 
-            $currencyRate = BigDecimal::one()->dividedBy(
-                BigDecimal::of($price),
+            $inverseRate = BigDecimal::one()->dividedBy(
+                BigDecimal::of($rate),
                 self::CRYPTO_RATE_SCALE,
                 RoundingMode::DOWN,
             );
 
-            $ratesArray[] = [
-                'code' => $toCurrency,
-                'rate' => $currencyRate,
-            ];
+            $ratesArray[$toCurrency] = new Rate(
+                $baseCurrency,
+                $toCurrency,
+                $rate,
+                $inverseRate->toFloat(),
+            );
         }
 
-        $ratesArray[] = [
-            'code' => $baseCurrency,
-            'rates' => 1,
-        ];
-
-        return $ratesArray;
+        return self::addBaseRateToArray($ratesArray, $baseCurrency);
     }
 
     private function buildFiatRatesArray(
@@ -125,16 +161,25 @@ class Rates
         $ratesArray = [];
 
         foreach ($rates as $rate) {
-            $ratesArray[] = [
-                'code' => $rate['code'],
-                'rate' => $rate['rate'],
-            ];
+            $ratesArray[$rate['code']] = new Rate(
+                $baseCurrency,
+                $rate['code'],
+                $rate['rate'],
+                $rate['inverseRate'],
+            );
         }
 
-        $ratesArray[] = [
-            'code' => $baseCurrency,
-            'rates' => 1,
-        ];
+        return self::addBaseRateToArray($ratesArray, $baseCurrency);
+    }
+
+    private static function addBaseRateToArray(array $ratesArray, string $baseCurrency): array
+    {
+        $ratesArray[$baseCurrency] = new Rate(
+            $baseCurrency,
+            $baseCurrency,
+            1,
+            1,
+        );
 
         return $ratesArray;
     }
