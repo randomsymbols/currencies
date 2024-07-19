@@ -145,8 +145,8 @@ class Rates
             $ratesArray[$toCurrency] = new Rate(
                 $baseCurrency,
                 $toCurrency,
-                $rate,
-                $inverseRate->toFloat(),
+                (string) $rate,
+                (string) $inverseRate,
             );
         }
 
@@ -164,8 +164,8 @@ class Rates
             $ratesArray[$rate['code']] = new Rate(
                 $baseCurrency,
                 $rate['code'],
-                $rate['rate'],
-                $rate['inverseRate'],
+                (string) $rate['rate'],
+                (string) $rate['inverseRate'],
             );
         }
 
@@ -177,8 +177,8 @@ class Rates
         $ratesArray[$baseCurrency] = new Rate(
             $baseCurrency,
             $baseCurrency,
-            1,
-            1,
+            '1',
+            '1',
         );
 
         return $ratesArray;
