@@ -10,8 +10,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 
-#[AsCommand(name: 'app:rates-update')]
-class UpdateRatesCommand extends Command
+#[AsCommand(name: 'app:rates-get')]
+class GetRatesCommand extends Command
 {
     public function __construct(
         private readonly Rates $rates,
@@ -28,8 +28,10 @@ class UpdateRatesCommand extends Command
                 $baseCurrency = Rates::DEFAULT_BASE_CURRENCY;
             }
 
-            $this->rates->updateCryptoRates($baseCurrency);
-            $this->rates->updateFiatRates($baseCurrency);
+            $rates = $this->rates->getRates($baseCurrency);
+            $ratesJson = json_encode($rates, JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR);
+
+            $output->writeln($ratesJson);
 
             return Command::SUCCESS;
         } catch (Throwable $e) {
