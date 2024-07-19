@@ -21,7 +21,7 @@ class Rates
     public const DEFAULT_BASE_CURRENCY = 'USD';
     private const FILE_PREFIX = 'currency_rates';
     private const CRYPTO_RATES_EXCHANGE = 'coinbase';
-    private const CRYPTO_RATE_SCALE = 17;
+    private const CRYPTO_RATE_SCALE = 20;
 
     public function __construct(
         private readonly HttpClientInterface $client,
@@ -108,6 +108,11 @@ class Rates
                 'rate' => $currencyRate,
             ];
         }
+
+        $ratesArray[] = [
+            'code' => $baseCurrency,
+            'rates' => 1,
+        ];
 
         return $ratesArray;
     }
