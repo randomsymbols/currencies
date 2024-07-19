@@ -191,7 +191,7 @@ class Rates
     {
         $fileName = self::buildCryptoRatesFileName($baseCurrency);
 
-        return $this->getRatesFile($fileName);
+        return $this->getRatesArray($fileName);
     }
 
     /**
@@ -201,13 +201,13 @@ class Rates
     {
         $fileName = self::buildFiatRatesFileName($baseCurrency);
 
-        return $this->getRatesFile($fileName);
+        return $this->getRatesArray($fileName);
     }
 
     /**
      * @throws FileNotFoundException
      */
-    private function getRatesFile(string $fileName): array
+    private function getRatesArray(string $fileName): array
     {
         if (!$this->fileSystem->exists($fileName)) {
             throw new FileNotFoundException("File $fileName not found!");
